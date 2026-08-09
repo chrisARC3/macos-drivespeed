@@ -65,7 +65,14 @@ struct ContentView: View {
         }
         .padding()
         .frame(minWidth: 320)
-        .onAppear { sampler.start(intervalSeconds: samplingInterval) }
+        .onAppear {
+            // Increment 1.1 — one-shot console snapshot proving we can read the
+            // block-storage byte counters (FR-8). Temporary scaffolding, removed
+            // in the Phase 2 cleanup just as NetSpeed's equivalent was. The
+            // sampler below still reads *network* counters until Increment 1.2.
+            DriveCounters.printSnapshot()
+            sampler.start(intervalSeconds: samplingInterval)
+        }
         .onDisappear { sampler.stop() }
         // Apply a rate change immediately (FR-9c): the timer re-arms at the new
         // interval and the graph resizes to keep its 60-second window.

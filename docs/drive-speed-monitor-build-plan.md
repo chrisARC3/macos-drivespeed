@@ -75,12 +75,26 @@ This measured **740 MB/s** on the 1 TB 990 EVO Plus during prototyping. For writ
 
 ## Phase 1 — Core measurement (console only, no UI change yet)
 
-### Increment 1.1 — Read block-storage byte counters once
+### Increment 1.1 — Read block-storage byte counters once  ✅ COMPLETE (Aug 9, 2026)
 - **Goal:** Prove we can read cumulative bytes read/written per physical device. (FR-8)
-- **Build:** New `DriveCounters.swift` replacing `NetworkCounters.swift`. Enumerate `IOServiceMatching("IOBlockStorageDriver")`; per device read the `Statistics` dictionary for `Bytes (Read)` / `Bytes (Write)` plus `Physical Interconnect`. BSD name and product name are read **in this increment only**, to make the console output legible; per FR-10d they do not survive into the shipped sampler.
+- **Build:** New `DriveCounters.swift`. Enumerate `IOServiceMatching("IOBlockStorageDriver")`; per device read the `Statistics` dictionary for `Bytes (Read)` / `Bytes (Write)` plus `Physical Interconnect`. BSD name and product name are read **in this increment only**, to make the console output legible; per FR-10d they do not survive into the shipped sampler.
+  - **Sequencing correction (Aug 9):** this increment **adds** `DriveCounters.swift` and leaves `NetworkCounters.swift` in place; **Increment 1.2 switches `SpeedSampler` over and deletes the old file.** The original wording ("replacing `NetworkCounters.swift`") would have broken the build mid-increment, since `SpeedSampler` still calls it. Keeping every increment independently buildable is the point of the approach.
 - **Verify:** Console prints one row per physical disk with large, plausible byte counts and a correct bus string.
 - **Done when:** Non-zero counters print for the internal SSD and each attached external.
 - **Note:** Already prototyped and validated headlessly on Aug 9 — 5 devices found, internal `Apple Fabric` at R=245.6 GB / W=153.0 GB, four externals on `USB`. **Sandbox confirmed** (NFR-2): the same code ran from a signed `.app` with `com.apple.security.app-sandbox` and no entitlement exceptions. Chris still confirms in Xcode.
+- **Result (Aug 9, 2026):** Added `DriveCounters.swift` — `DriveCounter` struct plus `DriveCounters.readAll()`, two private registry-lookup helpers, and a temporary `printSnapshot()`. Wired a one-shot `DriveCounters.printSnapshot()` into `ContentView`'s `.onAppear`, ahead of the existing (still network-based) `sampler.start()`. Compiled the **real source file** with a small `main.swift` driver via `swiftc -O` and ran it; output:
+
+  ```
+  DriveSpeed — 5 physical storage device(s):
+    disk0   APPLE SSD AP0256Z   Apple Fabric  read   267.93 GB   written   167.03 GB
+    disk6   SSD 990 EVO Plus    USB           read    37.22 GB   written    17.12 GB
+    disk4   Expansion HDD       USB           read     5.08 GB   written     0.02 GB
+    disk10  Portable SSD T5     USB           read     0.02 GB   written     0.00 GB
+    disk8   PSSD T5 EVO         USB           read     0.13 GB   written     0.00 GB
+  ```
+
+  All five physical devices found with correct bus strings and plausible non-zero counters; `disk0` had grown from 245.6 GB to 267.9 GB since the morning's prototype, consistent with an in-use machine. Full app `clean build` → **`** BUILD SUCCEEDED **`** with no compiler warnings. The project uses `PBXFileSystemSynchronizedRootGroup`, so the new file joined the target with no membership step — proven by `ContentView`'s call to it compiling. **Confirmed in Xcode by Chris (Aug 9, 2026):** the snapshot printed the five-device table to the console on launch, validating the read path under the App Sandbox in the real app (NFR-2).
+- **Snag worth recording:** the first cut formatted the snapshot with `String(format: "%-8@ %-22@ …")` and printed ragged columns. Darwin **silently ignores field-width flags on the `%@` object specifier**, so the padding did nothing. Replaced with explicit `rightPad`/`leftPad` helpers. Worth knowing before reaching for `%@` widths anywhere else in this project.
 
 ### Increment 1.2 — Poll on a timer and compute MB/s
 - **Goal:** Turn raw counters into live read/write throughput. (FR-4, FR-5, FR-8)
