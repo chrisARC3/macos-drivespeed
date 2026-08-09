@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3A9DFF"/>
+      <stop offset="1" stop-color="#005FE0"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF4B3E"/>
+      <stop offset="1" stop-color="#DC0A00"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#001634" flood-opacity="0.34"/>
+    </filter>
+    <clipPath id="tileclip"><rect x="100" y="100" width="824" height="824" rx="185" ry="185"/></clipPath>
+  </defs>
+
+  <!-- tile + gloss -->
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#tile)" filter="url(#shadow)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#gloss)" clip-path="url(#tileclip)"/>
+
+  <!-- gauge -->
+  <path d="M 285.10,709.00 A 262.0 262.0 0 1 1 738.90,709.00" fill="none" stroke="#ffffff" stroke-opacity="0.20" stroke-width="50.0" stroke-linecap="round"/>
+  <path d="M 285.10,709.00 A 262.0 262.0 0 0 1 726.62,427.72" fill="none" stroke="#ffffff" stroke-opacity="0.96" stroke-width="50.0" stroke-linecap="round"/>
+  <g stroke="#ffffff" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round">
+    <line x1="311.08" y1="694.00" x2="331.87" y2="682.00"/><line x1="283.52" y1="537.71" x2="307.16" y2="541.88"/><line x1="362.87" y1="400.28" x2="378.30" y2="418.66"/><line x1="512.00" y1="346.00" x2="512.00" y2="370.00"/><line x1="661.13" y1="400.28" x2="645.70" y2="418.66"/><line x1="740.48" y1="537.71" x2="716.84" y2="541.88"/><line x1="712.92" y1="694.00" x2="692.13" y2="682.00"/>
+  </g>
+
+  <!-- needle + hub -->
+  <polygon points="716.79,434.61 524.62,596.02 462.85,612.41 499.38,559.98" fill="url(#needle)"/>
+  <circle cx="512.0" cy="578.0" r="32" fill="#ffffff"/>
+  <circle cx="512.0" cy="578.0" r="13" fill="#0B4FBF"/>
+</svg>

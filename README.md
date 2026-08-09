@@ -1,0 +1,97 @@
+# DriveSpeed
+
+A lightweight macOS desktop widget that shows **real-time local disk throughput** —
+read and write — in a small floating window, with a rolling 60-second graph.
+
+It measures I/O **passively**: it reads the operating system's block-storage byte
+counters and computes the change each interval, so it never generates any disk
+load of its own. No benchmarks, no background writes, nothing persisted to disk.
+
+Throughput is **summed across the internal SSD and all USB drives**, so the
+reading reflects total storage activity regardless of which device carries it.
+
+> **Status: in development.** Phase 0 is complete — the project is re-badged from
+> its NetSpeed origin and builds cleanly. The measurement core is still NetSpeed's
+> network sampler; Phase 1 replaces it with the IOKit block-storage source. See
+> [`docs/drive-speed-monitor-build-plan.md`](docs/drive-speed-monitor-build-plan.md)
+> for live per-increment status. This README describes the intended v1 and will be
+> finalized when the build plan reaches Increment 5.4.
+
+## Planned features
+
+- **Live read & write**, updated every sample, shown as `X.X MB/s` — the unit
+  drives are actually specified in.
+- **60-second rolling graph**, held in memory only, with two lines — blue for
+  read, red for write.
+- **Sums internal + USB**, covering the built-in SSD and every attached USB
+  drive. Only the physical device layer is counted, so APFS containers and disk
+  images are never double-counted.
+- **Adjustable sampling rate**, 1–5 seconds, remembered across launches.
+- **Remembers its window position and size**; opens in the top-left on first launch.
+- **Follows the system light/dark appearance.**
+- **Tiny footprint** — pure SwiftUI. The full measurement pass costs 0.147 ms,
+  about 0.015% of one core at the 1-second rate.
+
+## Requirements
+
+- **macOS 26 (Tahoe)** or later
+- **Apple Silicon** Mac — the project builds `arm64` only
+- **Xcode 26** or later to build
+
+## Build & run
+
+1. Clone the repo and open **`DriveSpeed/DriveSpeed.xcodeproj`** in Xcode.
+2. In **Signing & Capabilities**, select your own **Team**. The project ships with
+   the author's team id, so Xcode will prompt you to choose yours; automatic
+   signing handles the rest. (Hardened runtime and the App Sandbox are enabled.)
+3. Select the **DriveSpeed** scheme and press **⌘R** to build and run.
+
+Or from the command line (add your team id, since the checked-in one is the
+author's):
+
+```sh
+xcodebuild -project DriveSpeed/DriveSpeed.xcodeproj -scheme DriveSpeed \
+  -configuration Release -destination 'platform=macOS' \
+  -derivedDataPath build DEVELOPMENT_TEAM=YOUR_TEAM_ID build
+```
+
+The built app lands at `build/Build/Products/Release/DriveSpeed.app`.
+
+## Install for daily use
+
+1. Build the **Release** configuration (the `xcodebuild` line above, or
+   **Product → Archive** in Xcode and export a copy of the app).
+2. Move **`DriveSpeed.app`** into **`/Applications`**.
+3. To start it automatically at login, add it in
+   **System Settings → General → Login Items**. DriveSpeed intentionally does not
+   manage login items itself — this keeps it minimal.
+
+Closing the window quits the app; relaunch it to bring it back.
+
+## How it will work
+
+Every interval (1–5 s), DriveSpeed enumerates IOKit's `IOBlockStorageDriver`
+instances, keeps those whose bus is internal (`Apple Fabric` or `PCI-Express`) or
+`USB`, sums their cumulative read and write byte counters, and divides the change
+since the previous reading by the elapsed time. The last 60 seconds of samples
+live in an in-memory ring buffer that feeds the graph, drawn directly with SwiftUI
+`Canvas`. Nothing is persisted except your chosen sampling interval and the window
+frame.
+
+Reading these counters needs **no elevated privileges** and no helper daemon — it
+works from inside the App Sandbox with no entitlement exceptions.
+
+## Not included (by design)
+
+No benchmarking or max-throughput measurement, no IOPS or latency, no per-process
+breakdown, no SMART health, no long-term logging, and no menu-bar item — this is a
+small, focused, personal-use widget. Thunderbolt and SATA buses are out of scope
+for v1. See [`docs/`](docs/) for the full requirements and the incremental build
+plan.
+
+DriveSpeed is a sibling to **NetSpeed**, which does the same job for network
+throughput, and shares its structure.
+
+## License
+
+[MIT](LICENSE) © 2026 ARC3 Solutions

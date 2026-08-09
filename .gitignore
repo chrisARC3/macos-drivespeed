@@ -1,0 +1,21 @@
+# ── macOS ───────────────────────────────────────────────
+.DS_Store
+
+# ── Xcode: build output & derived data ──────────────────
+build/
+DerivedData/
+
+# ── Xcode: per-user state (the *shared* scheme is kept) ──
+*.xcuserstate
+xcuserdata/
+
+# ── Xcode / Swift Package Manager misc ──────────────────
+*.moved-aside
+.swiftpm/
+.build/
+
+# ── Internal working note — kept locally, not published ──
+NEXT-SESSION-HANDOFF.md
+
+# ── Local design sample (unused, rights unverified — not ours to publish) ──
+docs/speedometer.png
