@@ -23,23 +23,19 @@ struct ContentView: View {
             // Numbers on top (FR-17), horizontally centered in the window and
             // staying centered as it resizes (v0.5). Format B and fixed-width
             // fields live in SpeedReadout (Increment 2.3).
-            SpeedReadout(downMbps: sampler.downMbps, upMbps: sampler.upMbps)
+            SpeedReadout(readMBps: sampler.readMBps, writeMBps: sampler.writeMBps)
 
             // 60-second rolling graph (FR-7) directly beneath the numbers.
             SpeedChart(samples: sampler.history.elements)
                 .frame(minHeight: 120)
 
-            // Bottom row: which physical interface(s) are carrying traffic (a small
-            // footnote) on the left, and the sampling-rate control on the right.
-            // Sharing one row keeps the numbers-on-top / graph-below layout (FR-17)
-            // and adds almost no height — the reason for choosing the compact menu.
+            // Bottom row: the sampling-rate control alone, pushed right (FR-17).
+            // NetSpeed shared this row with an "active interfaces" caption; the
+            // disk equivalent is dropped (FR-10d) because naming the busy drives
+            // would require per-device deltas, and the sampler deliberately keeps
+            // no device identity. The compact menu adds almost no height, which
+            // preserves the numbers-on-top / graph-below layout.
             HStack {
-                Text(sampler.sourceText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
                 Spacer(minLength: 8)
 
                 // Sampling interval (FR-9, 1–5 s) as an inline labeled menu. Inline
@@ -60,7 +56,7 @@ struct ContentView: View {
                 }
                 .controlSize(.small)
                 .fixedSize()
-                .help("How often to sample network throughput (seconds)")
+                .help("How often to sample disk throughput (seconds)")
             }
         }
         .padding()

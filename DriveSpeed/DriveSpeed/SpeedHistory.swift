@@ -10,12 +10,12 @@
 import Foundation
 
 /// One sampled throughput reading at a point in time. `time` drives the graph's
-/// x-axis; `downMbps` / `upMbps` are the two line series (FR-7b).
+/// x-axis; `readMBps` / `writeMBps` are the two line series (FR-7b).
 struct SpeedSample: Identifiable {
     let id = UUID()
     let time: Date
-    let downMbps: Double
-    let upMbps: Double
+    let readMBps: Double
+    let writeMBps: Double
 }
 
 /// A fixed-capacity FIFO buffer: appending beyond `capacity` evicts the oldest

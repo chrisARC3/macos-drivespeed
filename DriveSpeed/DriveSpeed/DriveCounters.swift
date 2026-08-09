@@ -4,7 +4,7 @@
 //
 //  Reads cumulative per-device byte counters via IOKit (IOBlockStorageDriver).
 //  Increment 1.1 — the disk-side replacement for NetSpeed's NetworkCounters.swift,
-//  which stays in the target until Increment 1.2 switches SpeedSampler over.
+//  which was deleted in Increment 1.2 when SpeedSampler switched to this source.
 //
 
 import Foundation
@@ -21,7 +21,13 @@ import IOKit.storage
 /// `bsdName` and `productName` exist for the Increment 1.1 console snapshot and
 /// nothing else. Per FR-10d the shipped sampler keeps no per-device identity, so
 /// these must not acquire a second caller — they go away with the snapshot.
-struct DriveCounter {
+///
+/// `nonisolated` explicitly: the target sets `SWIFT_DEFAULT_ACTOR_ISOLATION =
+/// MainActor`, so a bare declaration would be implicitly main-actor isolated.
+/// Reading IOKit registry properties has nothing to do with the main actor, and
+/// leaving the default in place makes `SpeedSampler`'s off-actor sampling helper
+/// a concurrency warning.
+nonisolated struct DriveCounter {
     let bsdName: String
     let productName: String
     let interconnect: String
@@ -29,7 +35,9 @@ struct DriveCounter {
     let bytesWritten: UInt64
 }
 
-enum DriveCounters {
+/// `nonisolated` for the same reason as `DriveCounter` above — this is a pure
+/// measurement layer with no UI coupling, so it stays actor-agnostic.
+nonisolated enum DriveCounters {
 
     /// Reads cumulative read/write byte counters for every physical storage
     /// device the system currently knows about.

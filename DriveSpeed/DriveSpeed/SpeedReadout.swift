@@ -17,20 +17,26 @@ import SwiftUI
 /// words line up under each other and the fixed-width arrows align vertically in
 /// a column beside the numbers. Each arrow is tinted with the shared blue/red
 /// scheme (SpeedPalette) so it matches its line in the graph.
+// NOTE (Increment 1.2): the values below are now **MB/s**, but the labels and
+// units are still NetSpeed's — so this view currently renders "Down X.X Mbps
+// (Y.Y MBps)" over a read figure, and the "÷ 8" secondary is meaningless. That
+// is expected: Phase 1 is console-only, and Increment 2.3 replaces the labels
+// ("Read"/"Write"), drops the parenthetical, and switches the unit to MB/s
+// (FR-5, FR-6). Trust the console until then.
 struct SpeedReadout: View {
-    let downMbps: Double
-    let upMbps: Double
+    let readMBps: Double
+    let writeMBps: Double
 
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
             GridRow {
                 label("Down", systemImage: "arrow.down", tint: SpeedPalette.down)
                     .gridColumnAlignment(.trailing)   // right-align the label column
-                value(mbps: downMbps)
+                value(mbps: readMBps)
             }
             GridRow {
                 label("Up", systemImage: "arrow.up", tint: SpeedPalette.up)
-                value(mbps: upMbps)
+                value(mbps: writeMBps)
             }
         }
         .font(.title3)

@@ -67,7 +67,7 @@ This is a personal-use utility, built in Swift with Xcode. Sibling to NetSpeed.
   - *Decrease* is FR-10c's detach case. Accepted cost: **one dropped sample** whenever a drive with accumulated bytes is unplugged. This is the deliberate trade for dropping the caption.
   - *Count change* covers a device transiently failing classification and returning on a later tick carrying accumulated bytes — the one path by which a scalar design could otherwise report a false **high** reading. Clamping on any count change closes it for the cost of one sample per attach or detach, both rare.
   - Residual, accepted: two devices leaving and joining within the same tick would leave the count unchanged. Vanishingly unlikely, and a simultaneous detach would almost certainly drive the total negative and clamp anyway.
-- FR-10f: On the **first tick after start** there is no previous sample, so the tick reports 0 and primes the baseline (NFR-4). Unchanged in spirit from NetSpeed.
+- FR-10f: **The baseline is primed at `start()`, not on the first tick.** `start(intervalSeconds:)` reads the totals and timestamps them *before* arming the timer, so the first tick is a real delta over one interval rather than a spike measured from zero. This is also why changing the sampling rate mid-run produces no artefact — `setInterval` re-enters `start()`, which re-primes. The tick still guards defensively: with no baseline, or a non-positive elapsed interval, it primes and waits rather than dividing by zero (NFR-4). *(Corrected Aug 9, 2026 — an earlier draft of this document said the first tick reports 0, which would have been true only if the baseline were primed lazily. NetSpeed primed eagerly and so does this.)*
 
 ### 4.5 Window behavior
 *Unchanged from NetSpeed FR-11 – FR-16.*

@@ -64,7 +64,7 @@ struct SpeedChart: View {
 
         // Y domain: 0 pinned at the bottom so idle reads as a flat baseline, auto-
         // scaled up to a "nice" ceiling ≥ the data max, with ~3 gridlines.
-        let dataMax = samples.reduce(0.0) { Swift.max($0, Swift.max($1.downMbps, $1.upMbps)) }
+        let dataMax = samples.reduce(0.0) { Swift.max($0, Swift.max($1.readMBps, $1.writeMBps)) }
         let gridValues = Self.yGridValues(dataMax: dataMax)
         let yMax = gridValues.last ?? 1
         func yFor(_ value: Double) -> CGFloat {
@@ -91,11 +91,11 @@ struct SpeedChart: View {
         // Needs at least two points to draw a segment.
         guard samples.count >= 2 else { return }
         context.stroke(
-            linePath(samples.map { CGPoint(x: xFor($0.time), y: yFor($0.downMbps)) }),
+            linePath(samples.map { CGPoint(x: xFor($0.time), y: yFor($0.readMBps)) }),
             with: .color(SpeedPalette.down), lineWidth: 1.5
         )
         context.stroke(
-            linePath(samples.map { CGPoint(x: xFor($0.time), y: yFor($0.upMbps)) }),
+            linePath(samples.map { CGPoint(x: xFor($0.time), y: yFor($0.writeMBps)) }),
             with: .color(SpeedPalette.up), lineWidth: 1.5
         )
     }
