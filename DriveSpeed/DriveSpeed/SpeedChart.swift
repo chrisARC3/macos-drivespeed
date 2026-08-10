@@ -19,6 +19,12 @@ import SwiftUI
 /// write (FR-7b) — over the most recent samples, drawn with `Canvas`. The x-axis
 /// spans the last 60 seconds (FR-7a), so as new samples arrive the plot scrolls
 /// left and the oldest samples fall off the edge.
+///
+/// **No in-chart legend.** The blue/red key lives on the `SpeedReadout` dots
+/// directly above, so repeating it here was redundant — and the reclaimed height
+/// goes to the plot. The chart still carries its own unit (the y-axis label), so
+/// FR-7b's "labels/units" is satisfied between the two views rather than by the
+/// chart alone.
 struct SpeedChart: View {
     let samples: [SpeedSample]
 
@@ -29,11 +35,8 @@ struct SpeedChart: View {
     private let bottomInset: CGFloat = 16  // "60s" / "now" labels
 
     var body: some View {
-        VStack(spacing: 4) {
-            Canvas { context, size in
-                draw(into: context, size: size)
-            }
-            legend
+        Canvas { context, size in
+            draw(into: context, size: size)
         }
     }
 
@@ -127,24 +130,6 @@ struct SpeedChart: View {
         path.move(to: first)
         for point in points.dropFirst() { path.addLine(to: point) }
         return path
-    }
-
-    // MARK: Legend (static — constant content, so it isn't re-evaluated per tick)
-
-    private var legend: some View {
-        HStack(spacing: 14) {
-            legendItem(color: SpeedPalette.read, label: "Read")
-            legendItem(color: SpeedPalette.write, label: "Write")
-        }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
-    }
-
-    private func legendItem(color: Color, label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(label)
-        }
     }
 
     // MARK: Y-axis scaling (pure — headless-tested)

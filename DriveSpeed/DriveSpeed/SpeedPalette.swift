@@ -14,9 +14,11 @@ import SwiftUI
 /// is an "out" — which is why this file needed no real change when the app
 /// switched from network to disk.
 ///
-/// Used by both the readout arrows and the graph lines so they can never drift
-/// apart. System dynamic colors, so they adapt to light/dark automatically
-/// (NFR-5).
+/// Used by both the readout dots and the graph lines so they can never drift
+/// apart. Since the in-chart legend was removed, those dots are the *only*
+/// statement of the mapping — which makes sharing this one source of truth
+/// load-bearing rather than merely tidy. System dynamic colors, so they adapt to
+/// light/dark automatically (NFR-5).
 enum SpeedPalette {
     /// Read — bytes in, off the drive.
     static let read = Color.blue

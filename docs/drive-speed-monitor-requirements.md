@@ -1,7 +1,7 @@
 # Drive Speed Monitor — Requirements
 
-**Version:** 1.1
-**Changelog:** v1.1 (Aug 10, 2026) — added **FR-6a**: figures below 1 MB/s auto-scale to **KB/s**, matching Activity Monitor, and the graph's y-axis scales with them. Chris's request, after noticing the divergence while cross-checking the two apps. v1.0 (Aug 9, 2026) — initial requirements, derived from NetSpeed v0.9.
+**Version:** 1.2
+**Changelog:** v1.2 (Aug 10, 2026) — **readout arrows became colour dots and the in-chart legend was removed** (FR-7b, FR-17). Up/down arrows carried a network sense — packets in and out — that reads oddly for local drives, and duplicated the legend below the graph. Chris's request after living with the app. v1.1 (Aug 10, 2026) — added **FR-6a**: figures below 1 MB/s auto-scale to **KB/s**, matching Activity Monitor, and the graph's y-axis scales with them. Chris's request, after noticing the divergence while cross-checking the two apps. v1.0 (Aug 9, 2026) — initial requirements, derived from NetSpeed v0.9.
 **Date:** August 9, 2026 — last updated August 10, 2026
 **Owner:** Chris
 **Status:** **v1.0 shipped.** Every FR and NFR verified against the running app in the Increment 5.4 traceability pass (Aug 10, 2026). Derived from `network-speed-widget-requirements.md` v0.9 (NetSpeed v1.0, shipped Jul 13, 2026), which this project duplicates in structure and behavior. Every difference from that document is called out explicitly below.
@@ -49,7 +49,7 @@ This is a personal-use utility, built in Swift with Xcode. Sibling to NetSpeed.
   - **The fixed-width field survives the switch** (NFR-3): a KB/s figure is by definition under 1000 — 1000 KB/s *is* 1 MB/s — so both tiers fit the same four-digit field, and `MB/s` and `KB/s` are both four characters. The readout does not shift as a value crosses the boundary. Verified across the boundary in both directions.
 - FR-7: Display a **rolling graph** (sparkline) of recent throughput, held **in memory only** — nothing is written to disk. *(Unchanged.)*
   - FR-7a: Graph window length: **60 seconds** of history. *(Unchanged.)*
-  - FR-7b: Read and write are drawn as **two separate lines**, each a distinct color, with labels/units. *(Was download/upload.)*
+  - FR-7b: Read and write are drawn as **two separate lines**, each a distinct color, with labels/units. *(Was download/upload.)* **The colour key lives on the readout dots, not in an in-chart legend** *(v1.2, Aug 10, 2026)*: the chart carries its own unit via the y-axis label, and the blue/red mapping is stated once by the `Read ●` / `Write ●` dots directly above it. A separate legend beneath the graph repeated that mapping and cost vertical space, so it was removed. This makes `SpeedPalette` load-bearing — it is now the single place the mapping exists, shared by the dots and the lines.
   - FR-7c: The y-axis **shares the readout's unit rule** (FR-6a). Its unit is chosen from the largest value in the visible window — deliberately **not** from the rounded axis ceiling, because rounding can cross the 1 MB/s boundary: data peaking at 0.9 MB/s rounds to a ceiling of 1.0, which would label the axis in MB/s while the readout showed `900.0 KB/s`. With no data the axis keeps `MB/s` as a neutral placeholder rather than labelling its `[0, 1]` fallback ceiling `1000 KB/s`.
 
 ### 4.3 How it measures
@@ -91,7 +91,7 @@ This is a personal-use utility, built in Swift with Xcode. Sibling to NetSpeed.
 - FR-16: **Closing the window quits the app.** There is no menu bar item in v1; to reopen, relaunch.
 
 ### 4.6 Layout
-- FR-17: Content layout is **numbers on top, graph below**, with the numeric readout **horizontally centered** and staying centered as the window resizes. *(Unchanged.)* The bottom row now holds **only the sampling-interval control**, right-aligned — NetSpeed shared that row with its active-interface caption, which is dropped here (FR-10d).
+- FR-17: Content layout is **numbers on top, graph below**, with the numeric readout **horizontally centered** and staying centered as the window resizes. *(Unchanged.)* The bottom row now holds **only the sampling-interval control**, right-aligned — NetSpeed shared that row with its active-interface caption, which is dropped here (FR-10d). The graph area holds only the plot: with the legend removed in v1.2 (FR-7b), the height it occupied is reclaimed by the plot itself, so the window's minimum height is unchanged and the chart simply gets taller. *(If the minimum window height should shrink instead, that is a change to `SpeedChart`'s `minHeight` in `ContentView` — deliberately not done, since more plot is the better use of the space.)*
 - FR-18: The main window uses the **standard native title bar**, titled with the app name followed by its **major.minor version** — e.g. **"DriveSpeed 1.0"** — read from the bundle's marketing version (`CFBundleShortVersionString`). *(Unchanged mechanism; app name differs.)*
 
 ## 5. Non-Functional Requirements

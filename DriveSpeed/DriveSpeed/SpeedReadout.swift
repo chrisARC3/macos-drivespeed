@@ -30,15 +30,12 @@ struct SpeedReadout: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
             GridRow {
-                // Arrow directions follow the palette's in/out sense: data coming
-                // off a drive is a read (down, blue), data going onto one is a
-                // write (up, red) — the same mapping NetSpeed used for down/up.
-                label("Read", systemImage: "arrow.down", tint: SpeedPalette.read)
+                label("Read", tint: SpeedPalette.read)
                     .gridColumnAlignment(.trailing)   // right-align the label column
                 value(readMBps)
             }
             GridRow {
-                label("Write", systemImage: "arrow.up", tint: SpeedPalette.write)
+                label("Write", tint: SpeedPalette.write)
                 value(writeMBps)
             }
         }
@@ -48,17 +45,27 @@ struct SpeedReadout: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// A direction label: the word followed by a color-tinted arrow (matching its
-    /// graph line). Word first, arrow second, so that under the column's trailing
-    /// alignment the fixed-width arrows land in the same spot on both rows and
-    /// align vertically — which is why "Read" and "Write" being different lengths
-    /// doesn't misalign them. Only the arrow is tinted; the word stays in the
-    /// default foreground for legibility.
-    private func label(_ text: String, systemImage: String, tint: Color) -> some View {
-        HStack(spacing: 4) {
+    /// A direction label: the word followed by a color-tinted dot matching its
+    /// graph line.
+    ///
+    /// **The dots are the graph's colour key.** They replaced up/down arrows,
+    /// which carried a network sense — packets in and out — that reads oddly for
+    /// a drive, and which duplicated the chart's own legend. With the legend gone,
+    /// these dots are the only place the blue/red mapping is stated, which is why
+    /// they use the same `SpeedPalette` values as the lines rather than any local
+    /// colour.
+    ///
+    /// Word first, dot second, so that under the column's trailing alignment the
+    /// fixed-size dots land in the same spot on both rows and align vertically —
+    /// which is why "Read" and "Write" being different lengths doesn't misalign
+    /// them. Only the dot is tinted; the word stays in the default foreground for
+    /// legibility.
+    private func label(_ text: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
             Text(text)
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
+            Circle()
+                .fill(tint)
+                .frame(width: 9, height: 9)
         }
     }
 

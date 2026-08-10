@@ -272,6 +272,19 @@ Also fixed: FR-7c was ordered before FR-7b, and the header date predated two ame
 
 ---
 
+## Post-v1.0 changes
+
+### Readout dots replace arrows; in-chart legend removed  ✅ COMPLETE (Aug 10, 2026) — requirements v1.2
+
+- **Why:** Chris, after living with the shipped app. The up/down arrows carried a *network* sense — packets in and out — that reads oddly for local drives, and they duplicated the Read/Write legend sitting just below the graph.
+- **Build:** `SpeedChart` lost `legend` and `legendItem`; its body is now just the `Canvas`. `SpeedReadout`'s `label(_:systemImage:tint:)` became `label(_:tint:)`, rendering a 9 pt filled `Circle` in place of the SF Symbol arrow.
+- **Structural consequence worth recording:** with the legend gone, **the readout dots are the only statement of the blue/red mapping**. That promotes `SpeedPalette` from tidiness to load-bearing — the dots and the lines must read the same source or the app silently mislabels itself. Noted in `SpeedPalette`'s own doc comment so a later change doesn't hardcode a colour at one of the two sites.
+- **Space decision:** the reclaimed height goes to the **plot**, not to a shorter window. `SpeedChart`'s `minHeight` in `ContentView` is unchanged, so the minimum window height is the same and the chart is simply taller. Flipping this to shrink the window instead is a one-line change, recorded in FR-17.
+- **Verify:** clean warning-free build; `grep` confirms no surviving `legend`/`legendItem`/`arrow.*` references (the only `systemImage` left is the unrelated `timer` icon on the sampling menu). Confirmed on screen by Chris.
+- **Note:** the app's `MARKETING_VERSION` stays at **1.0**, so the window title still reads "DriveSpeed 1.0". Only the requirements document moved to v1.2. Bumping the app version is a separate decision.
+
+---
+
 ## Coverage map (requirement → increment)
 
 | Requirement | Increment |
