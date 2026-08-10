@@ -25,7 +25,7 @@ struct SpeedChart: View {
     // Insets that reserve room around the line area for the axis labels.
     private let leftInset: CGFloat = 36    // y-axis value labels
     private let rightInset: CGFloat = 18   // so the "now" label isn't clipped
-    private let topInset: CGFloat = 18     // "MB/s" unit + top gridline label
+    private let topInset: CGFloat = 18     // unit label + top gridline label
     private let bottomInset: CGFloat = 16  // "60s" / "now" labels
 
     var body: some View {
@@ -75,6 +75,23 @@ struct SpeedChart: View {
             return plotBottom - frac * (plotBottom - plotTop)
         }
 
+        // Axis unit (FR-6a): chosen once for the whole axis, so every label shares
+        // one unit. Geometry above stays in MB/s — only the labels are converted.
+        //
+        // Chosen from `dataMax`, deliberately NOT from `yMax`. `yMax` is the
+        // rounded-up ceiling, and rounding can cross the 1 MB/s boundary that the
+        // unit depends on: data peaking at 0.9 MB/s gets a ceiling of 1.0, so a
+        // yMax-based unit would label the axis in MB/s while the readout — which
+        // scales off the actual figure — showed "900.0 KB/s". Picking from the
+        // data keeps the two in agreement.
+        //
+        // With no data at all the unit is arbitrary, so the axis keeps MB/s as a
+        // neutral placeholder rather than labelling its [0, 1] fallback ceiling as
+        // "1000 KB/s".
+        let axisUnit = dataMax > 0
+            ? ReadoutFormat.unit(forMagnitude: dataMax)
+            : (label: "MB/s", factor: 1.0)
+
         // Gridlines + y-axis value labels.
         for value in gridValues {
             let y = yFor(value)
@@ -82,11 +99,12 @@ struct SpeedChart: View {
             gridline.move(to: CGPoint(x: plotLeft, y: y))
             gridline.addLine(to: CGPoint(x: plotRight, y: y))
             context.stroke(gridline, with: .color(.gray.opacity(0.22)), lineWidth: 0.5)
-            label(Self.axisLabel(value), at: CGPoint(x: plotLeft - 4, y: y), anchor: .trailing)
+            label(Self.axisLabel(value * axisUnit.factor),
+                  at: CGPoint(x: plotLeft - 4, y: y), anchor: .trailing)
         }
 
         // Unit + x-axis endpoint labels ("60s" left, "now" right — FR-7a).
-        label("MB/s", at: CGPoint(x: 2, y: 1), anchor: .topLeading)
+        label(axisUnit.label, at: CGPoint(x: 2, y: 1), anchor: .topLeading)
         label("60s", at: CGPoint(x: plotLeft, y: size.height - 1), anchor: .bottomLeading)
         label("now", at: CGPoint(x: plotRight, y: size.height - 1), anchor: .bottomTrailing)
 

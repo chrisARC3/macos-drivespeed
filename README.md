@@ -20,7 +20,8 @@ reading reflects total storage activity regardless of which device carries it.
 ## Planned features
 
 - **Live read & write**, updated every sample, shown as `X.X MB/s` — the unit
-  drives are actually specified in.
+  drives are actually specified in — auto-scaling to `KB/s` below 1 MB/s so it
+  reads the same way Activity Monitor does.
 - **60-second rolling graph**, held in memory only, with two lines — blue for
   read, red for write.
 - **Sums internal + USB**, covering the built-in SSD and every attached USB

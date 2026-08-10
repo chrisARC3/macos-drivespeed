@@ -153,7 +153,30 @@ This measured **740 MB/s** on the 1 TB 990 EVO Plus during prototyping. For writ
 
 ---
 
-## Phase 3 — Window behavior *(inherited)*
+### Increment 2.4 — Auto-scale to KB/s below 1 MB/s (FR-6a, FR-7c)  ✅ COMPLETE (Aug 10, 2026)
+
+Requested by Chris (Aug 10, 2026) after Pass 1/2 passed: Activity Monitor converts sub-1 MB/s figures to KB/s, and since he cross-checks the two apps constantly, matching its convention removes a mental conversion. Not previously a deferred item — genuinely new scope, hence requirements v1.1.
+
+- **Build:** `ReadoutFormat` gained `ScaledRate`, `unit(forMagnitude:)`, and `scale(mbps:)`. `SpeedReadout` renders `scale(...)` per figure. `SpeedChart` picks one unit for the whole axis and converts only the gridline *labels* — the geometry stays in MB/s.
+- **Scope decision:** the axis was included rather than the readout alone. Scaling only the readout would have let the app contradict itself — `847.3 KB/s` above an axis labelled `0.8 MB/s`.
+- **Bug caught by the test output, not by review.** The first cut chose the axis unit from `yMax`, the *rounded* ceiling. Rounding crosses the very boundary the unit depends on: data peaking at **0.9 MB/s** rounds to a ceiling of 1.0, so the axis read `0 / 0.5 / 1 MB/s` while the readout read `900.0 KB/s` — exactly the contradiction the increment existed to prevent. Fixed by choosing from `dataMax`, with an explicit `MB/s` placeholder when there is no data (so the `[0, 1]` idle fallback isn't labelled `1000 KB/s`). This is why the check was written as *"axis unit must agree with the readout at every magnitude"* rather than spot-checking one value.
+- **Result:** all checks passed. Readout: `0.0205 → "␣␣20.5 KB/s"`, `0.8473 → "␣847.3 KB/s"`, `0.9999 → "␣999.9 KB/s"`, `1.0 → "␣␣␣1.0 MB/s"`, `3200.7 → "3200.7 MB/s"`. **Width is constant at 11 characters across the entire range including the unit switch** (NFR-3). Axis agrees with the readout at 0.05, 0.15, 0.4, 0.9, 0.9999, 1.0, 2.0, 873.34, 3200.7. Clean warning-free build. **Confirmed in Xcode by Chris (Aug 10, 2026).**
+
+---
+
+## Phases 3–5 — Increments 3.1 + 4.1 + 5.1 run together  ✅ COMPLETE (Aug 10, 2026)
+
+**Confirmed in Xcode by Chris (Aug 10, 2026):** "Pass 1 & 2 all tests passed. Dark mode looks great." That closes FR-11, FR-12, FR-14, FR-16 (frame restored across the close→quit path), FR-9/9a–c (interval changed live and persisted), NFR-4 (idle zero state), and NFR-5 (light/dark).
+
+
+Run as a single sitting at Chris's request: all three are verification-only, and separating them would have cost three app restarts for checks that share one.
+
+- **Headless result (Aug 10, 2026): 24/24 checks passed, no build work needed.**
+  - *5.1 empty/zero state:* idle axis is `[0, 1]` rather than degenerate; an empty sample set, `NaN`, and `.infinity` all fall back safely; zero renders `"␣␣␣0.0"` at full field width; identical totals read 0 **without** clamping (idle must stay measurable). `RingBuffer` verified empty → single → at-capacity → evicting-oldest → `removeAll` → reusable.
+  - *4.1 sampling interval:* capacity is 61/31/21/16/13 at 1–5 s, and `(capacity − 1) × interval == 60` exactly at every rate, which is the real FR-7a invariant rather than five magic numbers. Degenerate interval 0 guarded.
+- **Already confirmed earlier, not worth re-testing:** FR-13 (first launch top-left) and FR-16 (closing quits) were both verified by Chris in Increment 0.1, when the new bundle identifier gave the app no saved frame. FR-14's resizability is self-evident from the persisted frame being 1313×747 against a 420×320 default.
+- **Live evidence for FR-11/FR-12 without launching anything:** the frame is already persisted in `UserDefaults` as `NSWindow Frame main = "1136 148 1313 747 0 0 2560 1410"`, and `samplingIntervalSeconds = 1` is written. What this does *not* prove is that the frame survives a **close→quit → relaunch** cycle, which is the one path that matters (FR-16 makes it the app's primary quit path) — that is the outstanding manual check.
+- **Documentation correction:** requirements §6 inherited NetSpeed's claim that the frame rides *macOS automatic window restoration*, subject to the "Close windows when quitting an application" setting. There is no `Saved Application State` directory for this bundle id at all; the frame is a `UserDefaults` autosave keyed off `Window(id: "main")`. §6 now records the observation and flags it as such rather than as a guarantee.
 
 ### Increment 3.1 — Verification pass
 - **Goal:** Confirm NetSpeed's window behavior survived the re-badge. (FR-11, FR-12, FR-13, FR-14, FR-16)
@@ -208,8 +231,10 @@ This measured **740 MB/s** on the 1 TB 990 EVO Plus during prototyping. For writ
 | FR-1, FR-2, FR-3 | Inherited (3.1) |
 | FR-4 | 1.2, 2.1 |
 | FR-5, FR-6 | 1.2, 2.3 |
+| FR-6a, FR-7c | 2.4 |
 | FR-7, FR-7a, FR-7b | 2.2 |
 | FR-8 | 1.1, 1.2 |
+| FR-8a | 2.3 *(discovered while investigating the field width)* |
 | FR-9, FR-9a–c | 4.1 |
 | FR-10, FR-10a, FR-10b | 1.3 |
 | FR-10c – FR-10f | 1.3, 5.2 |

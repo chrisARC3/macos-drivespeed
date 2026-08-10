@@ -62,11 +62,13 @@ struct SpeedReadout: View {
         }
     }
 
-    /// One direction's readout: "X.X MB/s" to one decimal place (FR-6), in a
-    /// tabular-digit fixed-width field so the layout holds steady from 0.0 up
-    /// through four integer digits (NFR-3).
+    /// One direction's readout to one decimal place (FR-6), auto-scaled to KB/s
+    /// below 1 MB/s (FR-6a), in a tabular-digit fixed-width field so the layout
+    /// holds steady — including across the unit boundary, since a KB/s figure is
+    /// always under 1000 and both unit strings are four characters (NFR-3).
     private func value(_ mbps: Double) -> some View {
-        Text(ReadoutFormat.field(mbps) + " MB/s")
+        let scaled = ReadoutFormat.scale(mbps: mbps)
+        return Text(ReadoutFormat.field(scaled.value) + " " + scaled.unit)
             .monospacedDigit()
     }
 }
