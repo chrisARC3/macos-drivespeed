@@ -15,14 +15,21 @@ import Observation
 ///
 /// The whole of the sampler's per-tick state, by design: per FR-10d DriveSpeed
 /// tracks **no device identity at all** — no dictionary, no registry entry IDs,
-/// no BSD names. Increment 1.3 adds a device count to this struct to support the
-/// FR-10e clamp.
+/// no BSD names. Three integers are the entire memory of the previous tick.
+///
+/// `deviceCount` exists solely for the FR-10e clamp. It closes the one path by
+/// which a scalar design could report a false *high* reading: a device that
+/// transiently fails classification and rejoins on a later tick would otherwise
+/// contribute its whole accumulated counter as a single interval's delta.
+/// Comparing counts catches that for the price of one integer.
+///
 /// `nonisolated` because the target sets `SWIFT_DEFAULT_ACTOR_ISOLATION =
 /// MainActor` — see the note on `DriveCounter`. This type is produced by the
 /// off-actor sampling helper, so it must not inherit main-actor isolation.
 nonisolated struct DriveTotals {
     var bytesRead: UInt64 = 0
     var bytesWritten: UInt64 = 0
+    var deviceCount: Int = 0
 }
 
 /// Polls the OS block-storage byte counters on a fixed interval, sums the
@@ -30,20 +37,24 @@ nonisolated struct DriveTotals {
 /// result for the UI to display. Console output is retained for debugging
 /// through Phase 1.
 ///
-/// **Scope caveat (Increment 1.2):** this currently sums *every* physical device
-/// `DriveCounters.readAll()` reports. Increment 1.3 narrows it to the FR-10
-/// internal + USB buses and adds the FR-10e clamp. On the development machine
-/// every attached device is already internal or USB, so today's numbers happen
-/// to agree with the eventual filtered ones — but they are not FR-10-correct
-/// until 1.3, and a Thunderbolt or SATA device would silently be included.
+/// Device scope is the FR-10 filter: internal storage (`Apple Fabric` on Apple
+/// Silicon, or `PCI-Express`) plus `USB`, summed into a single pair of figures.
+/// Thunderbolt, SATA, and anything unrecognised are excluded (§3).
 ///
 /// Counter behaviour, which differs from NetSpeed's in two ways that matter:
 /// the block-storage counters are **64-bit**, so the 4 GiB wrap NetSpeed had to
 /// guard against cannot happen; and they are **per-attachment**, so a device
 /// joining mid-run starts near zero and cannot inject a false spike (FR-10c).
-/// The `now < last` guard is kept anyway — it is free, and it is what catches
-/// the *detach* case, where a departing device's accumulated bytes leave the
-/// total and drive the delta negative.
+/// Attaching is therefore the harmless case; *detaching* is the one that needs
+/// handling, because a departing device's accumulated bytes leave the total and
+/// drive the delta negative.
+///
+/// Hence the FR-10e clamp in `rates(from:to:over:)`: a tick reports 0 if either
+/// total decreased **or** the device count changed. The cost is one dropped
+/// sample per attach or detach; the benefit is that the reading can never spike
+/// falsely. That asymmetry is deliberate — a dropped sample is invisible, while
+/// a false 35,000 MB/s reading would blow out the graph's auto-scaled y-axis and
+/// flatten a minute of real data into an invisible line along the bottom.
 @Observable
 @MainActor
 final class SpeedSampler {
@@ -151,16 +162,24 @@ final class SpeedSampler {
             return
         }
 
-        let read = Self.rate(from: previous.bytesRead, to: current.bytesRead, over: elapsed)
-        let write = Self.rate(from: previous.bytesWritten, to: current.bytesWritten, over: elapsed)
+        // A nil result is the FR-10e clamp firing: the device set changed, or a
+        // total went backwards, so this interval is not measurable and reports 0.
+        let measured = Self.rates(from: previous, to: current, over: elapsed)
+        let read = measured?.read ?? 0
+        let write = measured?.write ?? 0
 
         readMBps = read
         writeMBps = write
         history.append(SpeedSample(time: now, readMBps: read, writeMBps: write))
 
-        // Increment 1.2 scaffolding — removed in the Phase 2 cleanup, once the
-        // numbers are on screen, exactly as NetSpeed's console output was.
-        print(String(format: "R %8.2f MB/s   W %8.2f MB/s", read, write))
+        // Increments 1.2/1.3 scaffolding — removed in the Phase 2 cleanup, once
+        // the numbers are on screen, exactly as NetSpeed's console output was.
+        // The device count and clamp marker are here to make Increment 1.3's
+        // asymmetric pass condition directly observable: a clamped tick is
+        // expected on attach/detach, a false high reading never is.
+        print(String(format: "R %8.2f MB/s   W %8.2f MB/s   [%d device(s)]%@",
+                     read, write, current.deviceCount,
+                     measured == nil ? "  — clamped (device set changed)" : ""))
 
         lastTotals = current
         lastTime = now
@@ -176,15 +195,47 @@ final class SpeedSampler {
         return Double(current - previous) / elapsed / 1_000_000
     }
 
-    /// Summed cumulative byte counters across the sampled physical devices.
+    /// Read/write MB/s between two consecutive totals, or `nil` when the interval
+    /// is not measurable and must be reported as 0 — the FR-10e clamp.
     ///
-    /// Increment 1.3 adds the FR-10 bus filter (internal + USB) and a device
-    /// count here; today it sums everything `DriveCounters` reports.
+    /// Returning an optional rather than a zeroed pair is deliberate: the caller
+    /// needs to distinguish "genuinely idle" from "unmeasurable", and making that
+    /// distinction part of the type keeps the clamp logic in exactly one place.
+    ///
+    /// The interval is unmeasurable when:
+    /// - **the device count changed** — a drive attached or detached, so the two
+    ///   totals are sums over different sets and their difference is meaningless;
+    /// - **either total decreased** — which with a stable count means devices were
+    ///   swapped within the interval (FR-10e's acknowledged residual case).
+    ///
+    /// Both figures are clamped together, not just the one that moved: if the
+    /// device set shifted at all, neither number describes a real interval.
+    nonisolated static func rates(from previous: DriveTotals,
+                                  to current: DriveTotals,
+                                  over elapsed: TimeInterval) -> (read: Double, write: Double)? {
+        guard elapsed > 0,
+              current.deviceCount == previous.deviceCount,
+              current.bytesRead >= previous.bytesRead,
+              current.bytesWritten >= previous.bytesWritten
+        else { return nil }
+
+        return (rate(from: previous.bytesRead, to: current.bytesRead, over: elapsed),
+                rate(from: previous.bytesWritten, to: current.bytesWritten, over: elapsed))
+    }
+
+    /// Summed cumulative byte counters, and a count, across the physical devices
+    /// on the buses DriveSpeed samples (FR-10 — internal plus USB).
+    ///
+    /// No cache: `DriveCounters.isSampled` is re-evaluated per device per tick.
+    /// A full pass costs 0.147 ms — about 0.015% of one core at 1 Hz — so caching
+    /// classification against device identity would be complexity for no gain,
+    /// and would reintroduce exactly the per-device bookkeeping FR-10d removes.
     nonisolated static func currentTotals() -> DriveTotals {
         var totals = DriveTotals()
-        for drive in DriveCounters.readAll() {
+        for drive in DriveCounters.readAll() where DriveCounters.isSampled(interconnect: drive.interconnect) {
             totals.bytesRead &+= drive.bytesRead
             totals.bytesWritten &+= drive.bytesWritten
+            totals.deviceCount += 1
         }
         return totals
     }

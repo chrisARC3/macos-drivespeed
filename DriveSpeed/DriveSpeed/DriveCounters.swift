@@ -106,6 +106,32 @@ nonisolated enum DriveCounters {
         return results
     }
 
+    // MARK: Bus filter (FR-10)
+
+    /// The `Physical Interconnect` values DriveSpeed counts: the Mac's internal
+    /// storage plus USB.
+    ///
+    /// `Apple Fabric` is how Apple Silicon's internal SSD reports — **not**
+    /// `NVMe`, which macOS never reports on this hardware (FR-10a). `PCI-Express`
+    /// is accepted so the filter stays correct on an Intel Mac or a genuine PCIe
+    /// slot, though nothing on the target machine matches it. `USB` covers every
+    /// external drive here, including NVMe drives in USB enclosures.
+    ///
+    /// Everything else is excluded: Thunderbolt and SATA are out of scope for v1
+    /// for want of testable hardware (§3), and disk images fall outside these
+    /// values too — their backing I/O is already counted once on the real device.
+    /// Adding a bus later is a one-line change to this set.
+    private static let sampledInterconnects: Set<String> = ["Apple Fabric", "PCI-Express", "USB"]
+
+    /// Whether a device on this bus counts toward the readings (FR-10).
+    ///
+    /// A plain predicate rather than a bus enum on purpose: FR-10 sums internal
+    /// and USB into a single pair of figures, so nothing downstream ever needs to
+    /// know *which* of the two a device sits on — only whether it qualifies.
+    static func isSampled(interconnect: String) -> Bool {
+        sampledInterconnects.contains(interconnect)
+    }
+
     // MARK: Registry lookup helpers
 
     /// Searches the registry for a dictionary-valued property, walking *up* the
