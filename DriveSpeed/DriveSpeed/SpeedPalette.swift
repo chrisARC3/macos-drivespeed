@@ -7,14 +7,19 @@
 
 import SwiftUI
 
-/// Single source of truth for the download/upload colors, matching Apple's
-/// Activity Monitor network graph: **blue for data in** (download / reads) and
-/// **red for data out** (upload / writes). Used by both the readout arrows and
-/// the graph lines so they always agree. System dynamic colors, so they adapt to
-/// light/dark automatically (NFR-5).
+/// Single source of truth for the read/write colors, inherited unchanged from
+/// NetSpeed and matching Activity Monitor's in/out sense: **blue for data in**
+/// (bytes read off a drive) and **red for data out** (bytes written to one).
+/// The mapping carried over without redefinition — a read is an "in" and a write
+/// is an "out" — which is why this file needed no real change when the app
+/// switched from network to disk.
+///
+/// Used by both the readout arrows and the graph lines so they can never drift
+/// apart. System dynamic colors, so they adapt to light/dark automatically
+/// (NFR-5).
 enum SpeedPalette {
-    /// Download — packets in / reads.
-    static let down = Color.blue
-    /// Upload — packets out / writes.
-    static let up = Color.red
+    /// Read — bytes in, off the drive.
+    static let read = Color.blue
+    /// Write — bytes out, onto the drive.
+    static let write = Color.red
 }

@@ -2,27 +2,27 @@
 //  SpeedReadout.swift
 //  DriveSpeed
 //
-//  Increment 2.3 — the centered dual-unit numeric readout (FR-6 format B, FR-17).
+//  Increment 2.3 — the centered numeric readout (FR-6, FR-17).
 //
 
 import SwiftUI
 
-/// The download/upload readout: two rows (Down / Up), each showing
-/// "X.X Mbps (Y.Y MBps)" (FR-6, format B — Mbps primary, MBps a secondary
-/// parenthetical). Rendered with tabular digits in fixed-width fields so the
-/// numbers don't shift as they change magnitude (NFR-3), and centered as a block
-/// in the window, staying centered as it resizes (FR-17, v0.5).
+/// The read/write readout: two rows (Read / Write), each showing a single
+/// figure as "X.X MB/s" (FR-5, FR-6). Rendered with tabular digits in
+/// fixed-width fields so the numbers don't shift as they change magnitude
+/// (NFR-3), and centered as a block in the window, staying centered as it
+/// resizes (FR-17).
+///
+/// **Single unit, unlike NetSpeed.** NetSpeed showed "X.X Mbps (Y.Y MBps)" —
+/// megabits primary, because that is what ISP plans advertise, with megabytes as
+/// a parenthetical for real transfer feel. Storage has no such split: drives,
+/// enclosures, and benchmark tools all quote MB/s, so the megabit figure would
+/// carry no information and only add clutter. Dropped on Chris's call.
 ///
 /// The direction labels are right-aligned and ordered word-then-arrow, so the
 /// words line up under each other and the fixed-width arrows align vertically in
 /// a column beside the numbers. Each arrow is tinted with the shared blue/red
 /// scheme (SpeedPalette) so it matches its line in the graph.
-// NOTE (Increment 1.2): the values below are now **MB/s**, but the labels and
-// units are still NetSpeed's — so this view currently renders "Down X.X Mbps
-// (Y.Y MBps)" over a read figure, and the "÷ 8" secondary is meaningless. That
-// is expected: Phase 1 is console-only, and Increment 2.3 replaces the labels
-// ("Read"/"Write"), drops the parenthetical, and switches the unit to MB/s
-// (FR-5, FR-6). Trust the console until then.
 struct SpeedReadout: View {
     let readMBps: Double
     let writeMBps: Double
@@ -30,13 +30,16 @@ struct SpeedReadout: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
             GridRow {
-                label("Down", systemImage: "arrow.down", tint: SpeedPalette.down)
+                // Arrow directions follow the palette's in/out sense: data coming
+                // off a drive is a read (down, blue), data going onto one is a
+                // write (up, red) — the same mapping NetSpeed used for down/up.
+                label("Read", systemImage: "arrow.down", tint: SpeedPalette.read)
                     .gridColumnAlignment(.trailing)   // right-align the label column
-                value(mbps: readMBps)
+                value(readMBps)
             }
             GridRow {
-                label("Up", systemImage: "arrow.up", tint: SpeedPalette.up)
-                value(mbps: writeMBps)
+                label("Write", systemImage: "arrow.up", tint: SpeedPalette.write)
+                value(writeMBps)
             }
         }
         .font(.title3)
@@ -48,8 +51,9 @@ struct SpeedReadout: View {
     /// A direction label: the word followed by a color-tinted arrow (matching its
     /// graph line). Word first, arrow second, so that under the column's trailing
     /// alignment the fixed-width arrows land in the same spot on both rows and
-    /// align vertically. Only the arrow is tinted; the word stays in the default
-    /// foreground for legibility.
+    /// align vertically — which is why "Read" and "Write" being different lengths
+    /// doesn't misalign them. Only the arrow is tinted; the word stays in the
+    /// default foreground for legibility.
     private func label(_ text: String, systemImage: String, tint: Color) -> some View {
         HStack(spacing: 4) {
             Text(text)
@@ -58,17 +62,11 @@ struct SpeedReadout: View {
         }
     }
 
-    /// One direction's readout: primary "X.X Mbps" plus a de-emphasized
-    /// "(Y.Y MBps)" secondary (MBps = Mbps ÷ 8, FR-5). Two Text views (not a
-    /// concatenation) so each can carry its own foreground style; both use
-    /// tabular digits over `ReadoutFormat`'s fixed-width fields.
-    private func value(mbps: Double) -> some View {
-        HStack(spacing: 0) {
-            Text(ReadoutFormat.field(mbps) + " Mbps")
-                .monospacedDigit()
-            Text(" (" + ReadoutFormat.field(mbps / 8.0) + " MBps)")
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-        }
+    /// One direction's readout: "X.X MB/s" to one decimal place (FR-6), in a
+    /// tabular-digit fixed-width field so the layout holds steady from 0.0 up
+    /// through four integer digits (NFR-3).
+    private func value(_ mbps: Double) -> some View {
+        Text(ReadoutFormat.field(mbps) + " MB/s")
+            .monospacedDigit()
     }
 }

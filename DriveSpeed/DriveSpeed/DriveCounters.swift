@@ -15,12 +15,14 @@ import IOKit.storage
 /// the OS, together with the bus it sits on.
 ///
 /// `interconnect` is the raw `Physical Interconnect` string — "Apple Fabric",
-/// "PCI-Express", "USB", and so on. Increment 1.3 turns it into the FR-10
-/// internal + USB filter; 1.1 only proves we can read it.
+/// "PCI-Express", "USB", and so on — which `isSampled(interconnect:)` turns into
+/// the FR-10 filter.
 ///
-/// `bsdName` and `productName` exist for the Increment 1.1 console snapshot and
-/// nothing else. Per FR-10d the shipped sampler keeps no per-device identity, so
-/// these must not acquire a second caller — they go away with the snapshot.
+/// Three fields is all of it. Earlier increments also carried `bsdName` and
+/// `productName` to make the Phase 1 console snapshot legible; both were removed
+/// with that scaffolding in Increment 2.3, per FR-10d — DriveSpeed keeps no
+/// per-device identity, and dropping them also removes two registry searches per
+/// device per tick.
 ///
 /// `nonisolated` explicitly: the target sets `SWIFT_DEFAULT_ACTOR_ISOLATION =
 /// MainActor`, so a bare declaration would be implicitly main-actor isolated.
@@ -28,8 +30,6 @@ import IOKit.storage
 /// leaving the default in place makes `SpeedSampler`'s off-actor sampling helper
 /// a concurrency warning.
 nonisolated struct DriveCounter {
-    let bsdName: String
-    let productName: String
     let interconnect: String
     let bytesRead: UInt64
     let bytesWritten: UInt64
@@ -94,8 +94,6 @@ nonisolated enum DriveCounters {
 
             results.append(
                 DriveCounter(
-                    bsdName: searchString(from: drive, key: "BSD Name", inParents: false) ?? "?",
-                    productName: searchDictionary(from: drive, key: "Device Characteristics")?["Product Name"] as? String ?? "?",
                     interconnect: searchDictionary(from: drive, key: "Protocol Characteristics")?["Physical Interconnect"] as? String ?? "?",
                     bytesRead: bytesRead,
                     bytesWritten: bytesWritten
@@ -151,62 +149,5 @@ nonisolated enum DriveCounters {
             kCFAllocatorDefault,
             IOOptionBits(kIORegistryIterateRecursively | kIORegistryIterateParents)
         ) as? [String: Any]
-    }
-
-    /// Searches the registry for a string-valued property. `inParents` is false
-    /// for the BSD name, which lives on the *child* `IOMedia` rather than up the
-    /// parent chain.
-    private static func searchString(from entry: io_registry_entry_t, key: String, inParents: Bool) -> String? {
-        var options = IOOptionBits(kIORegistryIterateRecursively)
-        if inParents { options |= IOOptionBits(kIORegistryIterateParents) }
-        return IORegistryEntrySearchCFProperty(
-            entry,
-            kIOServicePlane,
-            key as CFString,
-            kCFAllocatorDefault,
-            options
-        ) as? String
-    }
-
-    // MARK: Increment 1.1 scaffolding
-
-    /// Prints a one-shot snapshot of every physical storage device to the console.
-    ///
-    /// Temporary: this exists to satisfy Increment 1.1's verification (console
-    /// shows plausible counters and a correct bus per device) and is removed in
-    /// the Phase 2 cleanup, exactly as NetSpeed's equivalent snapshot was. It is
-    /// the only reason `bsdName` and `productName` are read at all.
-    static func printSnapshot() {
-        let drives = readAll()
-        print("DriveSpeed — \(drives.count) physical storage device(s):")
-        for drive in drives {
-            let read = String(format: "%.2f", Double(drive.bytesRead) / 1_000_000_000)
-            let written = String(format: "%.2f", Double(drive.bytesWritten) / 1_000_000_000)
-            print("  "
-                  + rightPad(drive.bsdName, 8)
-                  + rightPad(drive.productName, 20)
-                  + rightPad(drive.interconnect, 14)
-                  + "read " + leftPad(read, 8) + " GB"
-                  + "   written " + leftPad(written, 8) + " GB")
-        }
-    }
-
-    /// Pads on the right to `width` for column alignment, with at least one
-    /// trailing space so over-long values never run into the next column.
-    ///
-    /// Done by hand because `String(format:)`'s field-width flags are silently
-    /// ignored for the `%@` object specifier on Darwin — `"%-22@"` pads nothing,
-    /// which is why the first cut of this snapshot printed ragged columns.
-    private static func rightPad(_ string: String, _ width: Int) -> String {
-        string.count >= width
-            ? string + " "
-            : string + String(repeating: " ", count: width - string.count)
-    }
-
-    /// Pads on the left to `width`, right-aligning the numeric columns.
-    private static func leftPad(_ string: String, _ width: Int) -> String {
-        string.count >= width
-            ? string
-            : String(repeating: " ", count: width - string.count) + string
     }
 }

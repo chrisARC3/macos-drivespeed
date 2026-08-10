@@ -3,7 +3,7 @@
 //  DriveSpeed
 //
 //  Increment 2.2 — the 60-second rolling throughput graph (FR-7).
-//  Increment 2.3 — axis labels (X: 60s…now, Y: Mbps) and distinct line colors.
+//  Increment 2.3 — axis labels (X: 60s…now, Y: MB/s) and distinct line colors.
 //  Increment 5.2a — reimplemented on SwiftUI `Canvas` (was SwiftUI `Charts`) to cut
 //  the once-per-second render cost and its associated memory growth. A `sample` of
 //  the Release build showed each 1 Hz Charts re-render costing ~24 ms of main-thread
@@ -15,8 +15,8 @@
 
 import SwiftUI
 
-/// The 60-second rolling throughput graph (FR-7): two line series — download and
-/// upload (FR-7b) — over the most recent samples, drawn with `Canvas`. The x-axis
+/// The 60-second rolling throughput graph (FR-7): two line series — read and
+/// write (FR-7b) — over the most recent samples, drawn with `Canvas`. The x-axis
 /// spans the last 60 seconds (FR-7a), so as new samples arrive the plot scrolls
 /// left and the oldest samples fall off the edge.
 struct SpeedChart: View {
@@ -25,7 +25,7 @@ struct SpeedChart: View {
     // Insets that reserve room around the line area for the axis labels.
     private let leftInset: CGFloat = 36    // y-axis value labels
     private let rightInset: CGFloat = 18   // so the "now" label isn't clipped
-    private let topInset: CGFloat = 18     // "Mbps" unit + top gridline label
+    private let topInset: CGFloat = 18     // "MB/s" unit + top gridline label
     private let bottomInset: CGFloat = 16  // "60s" / "now" labels
 
     var body: some View {
@@ -63,7 +63,10 @@ struct SpeedChart: View {
         }
 
         // Y domain: 0 pinned at the bottom so idle reads as a flat baseline, auto-
-        // scaled up to a "nice" ceiling ≥ the data max, with ~3 gridlines.
+        // scaled up to a "nice" ceiling ≥ the data max, with ~3 gridlines. The
+        // auto-scale is also what makes a transient anomaly self-correcting: a
+        // spike raises the ceiling only until it falls out of the 60-second
+        // buffer, which is why DriveSpeed does not guard against one (FR-10e-i).
         let dataMax = samples.reduce(0.0) { Swift.max($0, Swift.max($1.readMBps, $1.writeMBps)) }
         let gridValues = Self.yGridValues(dataMax: dataMax)
         let yMax = gridValues.last ?? 1
@@ -83,7 +86,7 @@ struct SpeedChart: View {
         }
 
         // Unit + x-axis endpoint labels ("60s" left, "now" right — FR-7a).
-        label("Mbps", at: CGPoint(x: 2, y: 1), anchor: .topLeading)
+        label("MB/s", at: CGPoint(x: 2, y: 1), anchor: .topLeading)
         label("60s", at: CGPoint(x: plotLeft, y: size.height - 1), anchor: .bottomLeading)
         label("now", at: CGPoint(x: plotRight, y: size.height - 1), anchor: .bottomTrailing)
 
@@ -92,11 +95,11 @@ struct SpeedChart: View {
         guard samples.count >= 2 else { return }
         context.stroke(
             linePath(samples.map { CGPoint(x: xFor($0.time), y: yFor($0.readMBps)) }),
-            with: .color(SpeedPalette.down), lineWidth: 1.5
+            with: .color(SpeedPalette.read), lineWidth: 1.5
         )
         context.stroke(
             linePath(samples.map { CGPoint(x: xFor($0.time), y: yFor($0.writeMBps)) }),
-            with: .color(SpeedPalette.up), lineWidth: 1.5
+            with: .color(SpeedPalette.write), lineWidth: 1.5
         )
     }
 
@@ -112,8 +115,8 @@ struct SpeedChart: View {
 
     private var legend: some View {
         HStack(spacing: 14) {
-            legendItem(color: SpeedPalette.down, label: "Download")
-            legendItem(color: SpeedPalette.up, label: "Upload")
+            legendItem(color: SpeedPalette.read, label: "Read")
+            legendItem(color: SpeedPalette.write, label: "Write")
         }
         .font(.caption2)
         .foregroundStyle(.secondary)

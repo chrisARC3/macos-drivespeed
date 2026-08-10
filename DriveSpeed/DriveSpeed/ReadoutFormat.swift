@@ -2,9 +2,8 @@
 //  ReadoutFormat.swift
 //  DriveSpeed
 //
-//  Increment 2.3 — number formatting for the dual-unit readout (FR-6, format B:
-//  "X.X Mbps (Y.Y MBps)"). Kept free of SwiftUI so the fixed-width field logic
-//  can be unit-tested headlessly.
+//  Increment 2.3 — number formatting for the "X.X MB/s" readout (FR-6). Kept
+//  free of SwiftUI so the fixed-width field logic can be unit-tested headlessly.
 //
 
 import Foundation
@@ -18,9 +17,14 @@ enum ReadoutFormat {
     /// as values change magnitude (NFR-3, FR-6). Values whose integer part
     /// exceeds `intDigits` simply render one character wider.
     ///
-    /// `intDigits` defaults to 3, which covers gigabit (≤ 999.9 Mbps / 124.9 MBps)
-    /// at a constant width; multi-gig peaks above 999.9 render slightly wider.
-    static func field(_ value: Double, intDigits: Int = 3) -> String {
+    /// `intDigits` defaults to **4**, holding a constant width up to 9999.9 MB/s
+    /// (about 10 GB/s). Widened from NetSpeed's 3 because disk figures routinely
+    /// exceed 999.9 MB/s where network ones rarely did: a single USB4 enclosure
+    /// measured 740 MB/s here, the internal SSD runs several times that, and FR-10
+    /// sums both buses — so a 3-digit field would overflow constantly and defeat
+    /// its own purpose. Values wider than `intDigits` still render, one character
+    /// wider (NFR-3, FR-6).
+    static func field(_ value: Double, intDigits: Int = 4) -> String {
         let s = String(format: "%.1f", value)
         let intLen = s.firstIndex(of: ".").map {
             s.distance(from: s.startIndex, to: $0)

@@ -21,8 +21,8 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 12) {
             // Numbers on top (FR-17), horizontally centered in the window and
-            // staying centered as it resizes (v0.5). Format B and fixed-width
-            // fields live in SpeedReadout (Increment 2.3).
+            // staying centered as it resizes. The "X.X MB/s" format and the
+            // fixed-width fields live in SpeedReadout (Increment 2.3).
             SpeedReadout(readMBps: sampler.readMBps, writeMBps: sampler.writeMBps)
 
             // 60-second rolling graph (FR-7) directly beneath the numbers.
@@ -61,14 +61,7 @@ struct ContentView: View {
         }
         .padding()
         .frame(minWidth: 320)
-        .onAppear {
-            // Increment 1.1 — one-shot console snapshot proving we can read the
-            // block-storage byte counters (FR-8). Temporary scaffolding, removed
-            // in the Phase 2 cleanup just as NetSpeed's equivalent was. The
-            // sampler below still reads *network* counters until Increment 1.2.
-            DriveCounters.printSnapshot()
-            sampler.start(intervalSeconds: samplingInterval)
-        }
+        .onAppear { sampler.start(intervalSeconds: samplingInterval) }
         .onDisappear { sampler.stop() }
         // Apply a rate change immediately (FR-9c): the timer re-arms at the new
         // interval and the graph resizes to keep its 60-second window.

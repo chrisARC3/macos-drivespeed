@@ -35,8 +35,7 @@ nonisolated struct DriveTotals {
 
 /// Polls the OS block-storage byte counters on a fixed interval, sums the
 /// per-interval byte deltas across physical storage devices, and publishes the
-/// result for the UI to display. Console output is retained for debugging
-/// through Phase 1.
+/// result for the UI to display.
 ///
 /// Device scope is the FR-10 filter: internal storage (`Apple Fabric` on Apple
 /// Silicon, or `PCI-Express`) plus `USB`, summed into a single pair of figures.
@@ -171,11 +170,6 @@ final class SpeedSampler {
         readMBps = read
         writeMBps = write
         history.append(SpeedSample(time: now, readMBps: read, writeMBps: write))
-
-        // Phase 1 scaffolding — removed in the Increment 2.3 cleanup, once the
-        // numbers are on screen, exactly as NetSpeed's console output was.
-        print(String(format: "R %8.2f MB/s   W %8.2f MB/s%@", read, write,
-                     measured == nil ? "   — counter decreased (drive removed)" : ""))
 
         lastTotals = current
         lastTime = now
