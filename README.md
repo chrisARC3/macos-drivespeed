@@ -10,14 +10,14 @@ load of its own. No benchmarks, no background writes, nothing persisted to disk.
 Throughput is **summed across the internal SSD and all USB drives**, so the
 reading reflects total storage activity regardless of which device carries it.
 
-> **Status: in development.** Phase 0 is complete — the project is re-badged from
-> its NetSpeed origin and builds cleanly. The measurement core is still NetSpeed's
-> network sampler; Phase 1 replaces it with the IOKit block-storage source. See
+> **Status: v1.0.** All 34 requirements are met or explicitly removed, verified
+> against the running app. See
 > [`docs/drive-speed-monitor-build-plan.md`](docs/drive-speed-monitor-build-plan.md)
-> for live per-increment status. This README describes the intended v1 and will be
-> finalized when the build plan reaches Increment 5.4.
+> for the per-increment record and
+> [`docs/drive-speed-monitor-requirements.md`](docs/drive-speed-monitor-requirements.md)
+> for the requirements themselves.
 
-## Planned features
+## Features
 
 - **Live read & write**, updated every sample, shown as `X.X MB/s` — the unit
   drives are actually specified in — auto-scaling to `KB/s` below 1 MB/s so it
@@ -30,8 +30,15 @@ reading reflects total storage activity regardless of which device carries it.
 - **Adjustable sampling rate**, 1–5 seconds, remembered across launches.
 - **Remembers its window position and size**; opens in the top-left on first launch.
 - **Follows the system light/dark appearance.**
-- **Tiny footprint** — pure SwiftUI. The full measurement pass costs 0.147 ms,
-  about 0.015% of one core at the 1-second rate.
+- **Tiny footprint** — pure SwiftUI, a 464 KB bundle. Measured on a Release
+  build: 0.4% average CPU, with 99.3% of main-thread samples sitting idle, and
+  memory flat after the first minute.
+
+**One thing worth knowing:** DriveSpeed counts *device* I/O, not application
+I/O. Bytes served from the page cache never reach the hardware, so re-reading a
+file you just wrote can show far less activity than the transfer implies. That
+is correct for a drive monitor — but it means the reading is not a benchmark of
+what a drive can do.
 
 ## Requirements
 
@@ -69,7 +76,7 @@ The built app lands at `build/Build/Products/Release/DriveSpeed.app`.
 
 Closing the window quits the app; relaunch it to bring it back.
 
-## How it will work
+## How it works
 
 Every interval (1–5 s), DriveSpeed enumerates IOKit's `IOBlockStorageDriver`
 instances, keeps those whose bus is internal (`Apple Fabric` or `PCI-Express`) or

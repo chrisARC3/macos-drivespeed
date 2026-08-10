@@ -210,17 +210,65 @@ Run as a single sitting at Chris's request: all three are verification-only, and
 - **Verify:** Unplug and re-plug USB drives several times while running, including during active I/O, and with two drives at once. The pass condition is asymmetric: a **0 for one tick is expected and acceptable** on any attach or detach (FR-10e); a **false high reading is not** and would indicate the count clamp is not firing. Also confirm the app is stable when *all* USB drives are removed, leaving only the internal SSD.
 - **Done when:** Repeated churn produces no false highs, no crash, and no reading stuck at zero.
 
-### Increment 5.3 — Footprint sanity check
+### Increment 5.3 — Footprint sanity check  ✅ COMPLETE (Aug 10, 2026)
+
+- **Result (Aug 10, 2026).** Release build, launched and measured on the target machine at the 1 s default rate. Bundle **464 KB**, executable 266 KB.
+  - **CPU: 0.4% average** since launch; instantaneous readings over a 10 s window ranged 0.0–4.3% with most under 1%.
+  - **`sample` over 5 s — 4236 main-thread samples:** **4207 (99.3%) idle in `mach_msg`**, waiting on the run loop. CoreAnimation transaction flush 20 (0.5%). `SpeedChart.draw` plus its label helper ~5 (0.1%). `SpeedSampler.tick` → `currentTotals` 4 (0.1%). **Our own code is a rounding error**, which is the direct contrast with NetSpeed's pre-5.2a state where a single Charts re-render cost ~24 ms/tick and ~97% of app CPU. Inheriting the `Canvas` implementation carried that fix over intact.
+  - **Memory: warm-up, not a leak.** RSS rose 91.6 → 94.0 MB over the first ~40 s, then went flat: across the following **3 minutes it drifted 48 KB total** (94000 → 94048 KB), which is noise. The growth stopping at the 60 s mark is exactly when the ring buffer finishes filling its 61 samples — a satisfying explanation rather than an assumed one. Measured at 20 s intervals over 4 minutes rather than inferred from two readings, precisely because NetSpeed's equivalent check is what caught the Charts growth.
+- **⚠️ Side effect, corrected.** Launching the Release build changed the persisted window frame from `1136 148 1313 747` to `1501 872 833 497` — the app did this, not the user. The original was written back with `defaults write`. Cause not determined; worth knowing that launching a second build of the same bundle id can disturb the saved frame, which is a caveat on the FR-11/FR-12 mechanism rather than on this increment.
 - **Goal:** Confirm low CPU/memory in the assembled app. (NFR-1)
 - **Build:** Profile a Release build.
 - **Verify:** `sample` the Release build at 1 s sampling; CPU should sit near NetSpeed's post-5.2a footprint. The measurement pass itself is already known to cost 0.147 ms/tick (0.015% of a core), so anything materially above that is coming from the UI, not from IOKit — check `SpeedChart` first if so.
 - **Done when:** Idle CPU is negligible and memory is flat over time.
 
-### Increment 5.4 — Requirements traceability pass
+### Increment 5.4 — Requirements traceability pass  ✅ COMPLETE (Aug 10, 2026) → **v1.0**
 - **Goal:** Every FR/NFR is met, deferred, or explicitly removed.
 - **Build:** Walk the requirements doc top to bottom against the running app.
 - **Verify:** Each requirement checked off with evidence.
 - **Done when:** Full coverage confirmed → **v1.0**.
+
+**Coverage: 34 requirements, all met or explicitly removed.**
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| FR-1 – FR-3 | ✅ | Floating, normal-level, opaque window — inherited, confirmed in the 3.1 pass |
+| FR-4 | ✅ | Live read/write on screen — 1.2, 2.1 |
+| FR-5 | ✅ | Bytes/s only, never bits — 2.3 (wording repaired in this pass) |
+| FR-6 | ✅ | One decimal, constant 4-digit field — 2.3, 17/17 width checks |
+| FR-6a | ✅ | KB/s below 1 MB/s — 2.4, verified across the boundary both ways |
+| FR-7, 7a, 7b | ✅ | 60 s in-memory two-line graph — 2.2 |
+| FR-7c | ✅ | Axis unit agrees with readout at every magnitude — 2.4 |
+| FR-8 | ✅ | Passive; zero `print()`, nothing written to disk — 1.1, 1.2, 2.3 cleanup |
+| FR-8a | ✅ | Device I/O not application I/O — measured, documented 2.3 |
+| FR-9, 9a–c | ✅ | 1–5 s, default 1 s, live change, persisted — 4.1 |
+| FR-10, 10a, 10b | ✅ | Internal + USB filter; Apple Fabric finding; physical layer only — 1.3 |
+| FR-10c | ✅ | Per-attachment counters, measured at 194,560 B on a fresh attach |
+| FR-10d | ✅ | Two scalars, no device identity — 1.2, corrected in this pass |
+| FR-10e | ✅ | Decrease guard prevents `UInt64` underflow — 1.3 |
+| FR-10e-i | ✅ | Count check removed — `790315f` |
+| FR-10f | ✅ | Baseline primed in `start()` — corrected 1.2 |
+| FR-11 – FR-14, FR-16 | ✅ | Frame restored across the close→quit path; top-left on first run — 0.1, 3.1 |
+| FR-15 | ❌ removed | Launch-at-login, inherited as removed from NetSpeed v0.9 |
+| FR-17, FR-18 | ✅ | Numbers-over-graph, centered; title "DriveSpeed 1.0" — 0.1, 2.1 |
+| NFR-1 | ✅ | 0.4% CPU, 99.3% idle, memory flat — 5.3 |
+| NFR-2 | ✅ | Sandboxed, no entitlement exceptions — 1.1 |
+| NFR-3 | ✅ | Constant 11-char field through the unit switch — 2.3, 2.4 |
+| NFR-4 | ✅ | Idle, empty, NaN, infinite, and no-device cases — 5.1 |
+| NFR-5 | ✅ | Dark mode confirmed by Chris — 3.1 pass |
+
+**The pass earned its keep — it found four real drifts, not just typos.** The requirements had been amended six times since v1.0, and three amendments left contradictions behind:
+
+1. **FR-10d still specified "three scalars… and the number of devices that contributed"** — a device count that FR-10e-i had already removed. This is the serious one: anyone implementing from that text would have rebuilt the very clamp we deliberately deleted.
+2. **FR-10b justified its conclusion via "the sampled device count never changes"** — reasoning through the same removed count. The conclusion held; the argument for it had rotted.
+3. **FR-5 said "MB/s only"**, which FR-6a contradicted the moment it was added. The intent was always "no megabits", not "no other byte unit".
+4. **§6 said the BSD and product names "should not survive into the shipped sampler"** — written while they still did. They were removed in 2.3, so the note needed the past tense.
+
+Also fixed: FR-7c was ordered before FR-7b, and the header date predated two amendments.
+
+### Increment 5.2 — Hot-plug and device-churn stress  ⏭️ DESCOPED (Aug 10, 2026)
+- **Why:** the increment was scoped around the device-count clamp, which FR-10e-i removed, and around distinguishing an expected clamped tick from a false high reading — a distinction that no longer exists. What remains is "does the app survive a drive being unplugged", which the decrease guard covers and which normal use exercises incidentally.
+- Chris's position (FR-10e-i) is that transient anomalies are acceptable in a monitoring tool, which removes the motivation for a formal stress pass. Reinstating it would only be warranted if the "active drives" caption or per-device breakdown (§7) were ever built, since those bring device identity back.
 
 ---
 
