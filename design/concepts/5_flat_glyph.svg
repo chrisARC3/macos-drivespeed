@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3A9DFF"/><stop offset="1" stop-color="#005FE0"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/><stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF4B3E"/><stop offset="1" stop-color="#DC0A00"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#001634" flood-opacity="0.34"/>
+    </filter>
+    <filter id="lift" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#001634" flood-opacity="0.40"/>
+    </filter>
+    <clipPath id="tileclip"><rect x="100" y="100" width="824" height="824" rx="185" ry="185"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#tile)" filter="url(#shadow)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#gloss)" clip-path="url(#tileclip)"/>
+  
+  <path d="M 285.10,584.90 A 262.0 262.0 0 1 1 738.90,584.90" fill="none" stroke="#ffffff" stroke-opacity="0.20" stroke-width="50.0" stroke-linecap="round"/>
+  <path d="M 285.10,584.90 A 262.0 262.0 0 0 1 726.62,303.62" fill="none" stroke="#ffffff" stroke-opacity="0.96" stroke-width="50.0" stroke-linecap="round"/>
+  <g stroke="#ffffff" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round"><line x1="311.08" y1="569.90" x2="331.87" y2="557.90"/><line x1="283.52" y1="413.61" x2="307.16" y2="417.78"/><line x1="362.87" y1="276.18" x2="378.30" y2="294.56"/><line x1="512.00" y1="221.90" x2="512.00" y2="245.90"/><line x1="661.13" y1="276.18" x2="645.70" y2="294.56"/><line x1="740.48" y1="413.61" x2="716.84" y2="417.78"/><line x1="712.92" y1="569.90" x2="692.13" y2="557.90"/></g>
+  <polygon points="716.79,310.51 524.62,471.92 462.85,488.31 499.38,435.88" fill="url(#needle)"/>
+  <circle cx="512.0" cy="453.90" r="32" fill="#ffffff"/>
+  <circle cx="512.0" cy="453.90" r="13" fill="#0B4FBF"/>
+  <g transform="translate(357.00,633.90) scale(0.3100)"><path d="M 60.66,69.37 Q 70.00,0.00 140.00,0.00 L 860.00,0.00 Q 930.00,0.00 939.34,69.37 L 990.66,450.63 Q 1000.00,520.00 930.00,520.00 L 70.00,520.00 Q 0.00,520.00 9.34,450.63 Z" fill="#ffffff" fill-opacity="0.96"/><path d="M 0.00,608.00 Q 0.00,548.00 60.00,548.00 L 940.00,548.00 Q 1000.00,548.00 1000.00,608.00 L 1000.00,660.00 Q 1000.00,720.00 940.00,720.00 L 60.00,720.00 Q 0.00,720.00 0.00,660.00 Z" fill="#ffffff" fill-opacity="0.66"/><rect x="445" y="44" width="110" height="28" rx="14" fill="#0B4FBF" fill-opacity="0.85"/></g>
+</svg>

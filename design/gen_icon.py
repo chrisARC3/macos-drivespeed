@@ -1,83 +1,55 @@
 #!/usr/bin/env python3
-"""Generate an original DriveSpeed speedometer app icon as SVG (1024x1024, macOS tile)."""
-import math, sys
+"""Generate the DriveSpeed app icon as SVG (1024x1024, macOS tile).
 
-CX, CY = 512.0, 578.0          # gauge center (a touch below middle so the needle has headroom)
-R = 262.0                       # gauge band centerline radius
-BAND = 50.0                     # gauge band thickness
-START, END = 150.0, 390.0       # arc sweep in screen degrees (opens at the bottom)
-NEEDLE = 325.0                  # needle angle (upper-right => "fast")
+A speedometer gauge, raised toward the top of the tile, with a silver external drive
+centred below it. The gauge sits exactly where it does in NetSpeed's icon
+(network-speed-monitor/design/gen_icon.py), so the two apps read as a family and differ
+only in the badge below: an Ethernet glyph there, a drive here.
 
-def P(r, deg):
-    a = math.radians(deg)
-    return (CX + r * math.cos(a), CY + r * math.sin(a))
+The drive is concept 1_silver from gen_concepts.py: GenericDrive.jpeg cut out of its
+white background, its top face foreshortened so it is wider than tall, and its metal
+cooled slightly toward the tile's blue. Silver was chosen because Mac users already
+read a silver/grey drive as storage (the internal boot drive's Finder icon).
+The drive is embedded in the SVG as a PNG, so icon.svg is self-contained.
 
-def fmt(p):
-    return f"{p[0]:.2f},{p[1]:.2f}"
+Usage:  python3 gen_icon.py [out.svg]      (default: icon.svg)
+Needs:  Pillow, numpy, scipy  (pip install pillow numpy scipy)
+Render each app-icon size with rsvg-convert, e.g.
+    rsvg-convert -w 1024 -h 1024 icon.svg -o icon_512x512@2x.png
+"""
+import os, sys
 
-# --- gauge arcs ---
-bg_s, bg_e = P(R, START), P(R, END)
-fill_e = P(R, NEEDLE)
-bg_arc   = f"M {fmt(bg_s)} A {R} {R} 0 1 1 {fmt(bg_e)}"       # 240deg, over the top
-fill_arc = f"M {fmt(bg_s)} A {R} {R} 0 0 1 {fmt(fill_e)}"     # 150->needle
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gen_concepts import (CX, DEFS, TILE, TREATMENTS, cut_out_drive, foreshorten,
+                          gauge_markup, png_data_uri, recolour)
 
-# --- ticks ---
-ticks = []
-d = START
-while d <= END + 0.1:
-    po, pi = P(232, d), P(208, d)
-    ticks.append(f'<line x1="{po[0]:.2f}" y1="{po[1]:.2f}" x2="{pi[0]:.2f}" y2="{pi[1]:.2f}"/>')
-    d += 40.0
+# Gauge centre: identical to NetSpeed's (its gauge + glyph group, centred on the tile).
+CY = 472.83
+DRIVE_WIDTH = 310.0             # drive width on the 1024 canvas
+DRIVE_OFFSET = 155.0            # drive top, measured down from the gauge hub;
+                                # chosen so the margins above the gauge and below
+                                # the drive match
+SQUASH = 0.6                    # top-face foreshortening (see gen_concepts.foreshorten)
 
-# --- needle (kite: tip, two base corners, counterweight tail) ---
-nd = math.radians(NEEDLE)
-dx, dy = math.cos(nd), math.sin(nd)
-px, py = -math.sin(nd), math.cos(nd)
-T    = (CX + 250 * dx, CY + 250 * dy)
-B1   = (CX + 22 * px,  CY + 22 * py)
-B2   = (CX - 22 * px,  CY - 22 * py)
-TAIL = (CX - 60 * dx,  CY - 60 * dy)
-needle_pts = " ".join(fmt(p) for p in (T, B1, TAIL, B2))
+drive = foreshorten(cut_out_drive(), SQUASH)
+h = DRIVE_WIDTH * drive.height / drive.width
+top = CY + DRIVE_OFFSET
+uri = png_data_uri(recolour(drive, TREATMENTS["silver"]), 640)
 
-svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3A9DFF"/>
-      <stop offset="1" stop-color="#005FE0"/>
-    </linearGradient>
-    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"    stop-color="#ffffff" stop-opacity="0.22"/>
-      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="needle" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FF4B3E"/>
-      <stop offset="1" stop-color="#DC0A00"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#001634" flood-opacity="0.34"/>
-    </filter>
-    <clipPath id="tileclip"><rect x="100" y="100" width="824" height="824" rx="185" ry="185"/></clipPath>
-  </defs>
+svg = f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024">{DEFS}
 
   <!-- tile + gloss -->
-  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#tile)" filter="url(#shadow)"/>
-  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#gloss)" clip-path="url(#tileclip)"/>
+  {TILE} fill="url(#tile)" filter="url(#shadow)"/>
+  {TILE} fill="url(#gloss)" clip-path="url(#tileclip)"/>
 
-  <!-- gauge -->
-  <path d="{bg_arc}" fill="none" stroke="#ffffff" stroke-opacity="0.20" stroke-width="{BAND}" stroke-linecap="round"/>
-  <path d="{fill_arc}" fill="none" stroke="#ffffff" stroke-opacity="0.96" stroke-width="{BAND}" stroke-linecap="round"/>
-  <g stroke="#ffffff" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round">
-    {"".join(ticks)}
-  </g>
+  <!-- gauge + needle + hub -->{gauge_markup(CY)}
 
-  <!-- needle + hub -->
-  <polygon points="{needle_pts}" fill="url(#needle)"/>
-  <circle cx="{CX}" cy="{CY}" r="32" fill="#ffffff"/>
-  <circle cx="{CX}" cy="{CY}" r="13" fill="#0B4FBF"/>
+  <!-- silver drive -->
+  <image x="{CX - DRIVE_WIDTH / 2:.2f}" y="{top:.2f}" width="{DRIVE_WIDTH:.0f}" height="{h:.2f}" filter="url(#lift)" xlink:href="{uri}"/>
 </svg>
 '''
 
 out = sys.argv[1] if len(sys.argv) > 1 else "icon.svg"
 with open(out, "w") as f:
     f.write(svg)
-print(f"wrote {out}")
+print(f"wrote {out}: gauge {CY - 287:.0f}-{CY + 156:.0f}, drive {top:.0f}-{top + h:.0f} (tile 100-924)")

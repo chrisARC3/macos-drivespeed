@@ -69,7 +69,7 @@ This measured **740 MB/s** on the 1 TB 990 EVO Plus during prototyping. For writ
 - **Verify:** `git remote -v` is empty; `git log` shows a single initial commit; `grep -ri netspeed` returns only intentional lineage references in the requirements doc.
 - **Done when:** Clean repo, no accidental route to the NetSpeed remote. **⚠️ Must land before any commit** — the duplicated folder carried NetSpeed's three commits and pushed to `github.com/chrisARC3/netspeed-macos`.
 - **Result (Aug 9, 2026):** Before deleting anything, confirmed the originals were intact: `network-speed-monitor/` still holds all three NetSpeed commits and both `network-*.md` docs, and the remote holds them too — so nothing unique was lost. Deleted `.git` and re-initialised on `main` with a single commit, **no remote configured**. Removed the two inherited `network-*.md` docs and `docs/screenshot.png` (it depicted NetSpeed's network readout, so it would have misrepresented this app). Rewrote `README.md` for DriveSpeed with an explicit in-development status block, and rewrote `NEXT-SESSION-HANDOFF.md`, which was badly stale — it described NetSpeed at end of Phase 2, pointed at the old paths, and would have steered a future session into NetSpeed's Increment 3.1. Also corrected the `design/gen_icon.py` docstring, the last unintentional NetSpeed reference. Verified: `git remote -v` empty, `git log` one commit on `main`, working tree clean, 32 files tracked, and `grep -ril netspeed` returns only `README.md` plus the two docs — all deliberate lineage prose.
-- **⚠️ Open item — app icon.** The file change map lists new artwork for `Assets.xcassets/AppIcon` and `design/icon.svg`, but **no increment covers it**. The inherited artwork is a speedometer, which arguably reads as "speed" regardless of bus and may need no change at all. Chris's call: keep it as-is, or add an increment to regenerate. `docs/speedometer.png` is untouched — gitignored, unused, rights unverified.
+- **✅ Resolved Nov 10, 2026 — see "App icon gets a drive badge" under Post-v1.0 changes.** ~~Open item — app icon.~~ The file change map lists new artwork for `Assets.xcassets/AppIcon` and `design/icon.svg`, but **no increment covers it**. The inherited artwork is a speedometer, which arguably reads as "speed" regardless of bus and may need no change at all. Chris's call: keep it as-is, or add an increment to regenerate. `docs/speedometer.png` is untouched — gitignored, unused, rights unverified.
 
 ---
 
@@ -282,6 +282,15 @@ Also fixed: FR-7c was ordered before FR-7b, and the header date predated two ame
 - **Space decision:** the reclaimed height goes to the **plot**, not to a shorter window. `SpeedChart`'s `minHeight` in `ContentView` is unchanged, so the minimum window height is the same and the chart is simply taller. Flipping this to shrink the window instead is a one-line change, recorded in FR-17.
 - **Verify:** clean warning-free build; `grep` confirms no surviving `legend`/`legendItem`/`arrow.*` references (the only `systemImage` left is the unrelated `timer` icon on the sampling menu). Confirmed on screen by Chris.
 - **Note:** the app's `MARKETING_VERSION` stays at **1.0**, so the window title still reads "DriveSpeed 1.0". Only the requirements document moved to v1.2. Bumping the app version is a separate decision.
+
+### App icon gets a drive badge  ✅ COMPLETE (Nov 10, 2026)
+
+- **Why:** NetSpeed and DriveSpeed shipped with the same speedometer icon and couldn't be told apart in the Dock. NetSpeed was updated first (Ethernet glyph `<•••>` under a raised gauge); DriveSpeed follows the same pattern with an external drive. Closes the open icon item under Increment 0.2.
+- **Build:** `design/gen_concepts.py` cuts the drive out of `design/GenericDrive.jpeg` (dropping its floor shadow), foreshortens the top face so it sits wider than tall, and recolours it; it produced five concepts in `design/concepts/` (silver, frosted white, blue metal, frosted at photo proportions, flat vector glyph). `design/gen_icon.py` now builds the chosen one into `design/icon.svg`, with the drive embedded as a PNG, and all ten `AppIcon` sizes are rendered from it with `rsvg-convert`. The scripts need Pillow, numpy and scipy.
+- **Decision (Chris):** **silver** (`1_silver`), because Mac users already read a silver/grey drive as storage from the internal boot drive's Finder icon.
+- **Family alignment:** the gauge centre is NetSpeed's exactly (`CY = 472.83`), so the two icons differ only in the badge. The drive's offset is set so the margin above the gauge equals the margin below the drive.
+- **Verify:** clean warning-free build; `AppIcon.icns` in the built bundle shows the new artwork.
+- **Version:** shipped as **1.0.1** (build 2), matching NetSpeed's icon release: `MARKETING_VERSION` 1.0 → 1.0.1, `CURRENT_PROJECT_VERSION` 1 → 2. The window title still reads "DriveSpeed 1.0", since FR-18 shows major.minor only.
 
 ---
 

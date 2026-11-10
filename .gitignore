@@ -19,3 +19,6 @@ NEXT-SESSION-HANDOFF.md
 
 # ── Local design sample (unused, rights unverified — not ours to publish) ──
 docs/speedometer.png
+
+# ── Python bytecode (design/gen_icon.py imports gen_concepts.py) ──
+__pycache__/
