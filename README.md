@@ -10,6 +10,10 @@ load of its own. No benchmarks, no background writes, nothing persisted to disk.
 Throughput is **summed across the internal SSD and all USB drives**, so the
 reading reflects total storage activity regardless of which device carries it.
 
+![DriveSpeed during a file transfer: Read 932.2 MB/s and Write 923.6 MB/s, above a 60-second graph whose blue read line and red write line run near 1,000 MB/s, fall away and climb back](design/sample.png)
+
+*During a file transfer, in the dark appearance, sampling once a second.*
+
 > **Status: v1.0.** All 34 requirements are met or explicitly removed, verified
 > against the running app. See
 > [`docs/drive-speed-monitor-build-plan.md`](docs/drive-speed-monitor-build-plan.md)
